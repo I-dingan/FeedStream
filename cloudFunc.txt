@@ -1,0 +1,113 @@
+please follow link in clickup and instead of python function if using node js
+Note try catch is not working everything else is fine 
+
+
+
+
+/**
+ * Triggered from a change to a Cloud Storage bucket.
+ *
+ * @param {!Object} event Event payload.
+ * @param {!Object} context Metadata for the event.
+ */
+
+/**
+ * Triggered from a change to a Cloud Storage bucket.
+ *
+ * @param {!Object} event Event payload.
+ * @param {!Object} context Metadata for the event.
+ */
+// Imports the Transcoder library
+const { TranscoderServiceClient } =
+  require('@google-cloud/video-transcoder').v1;
+
+const topicNameOrId = 'transcoding-start-status';
+
+// Imports the Google Cloud client library
+const { PubSub, Encodings } = require('@google-cloud/pubsub');
+
+// And the Apache Avro library
+const avro = require('avro-js');
+const fs = require('fs');
+
+// Creates a client; cache this for further use
+
+exports.helloGCS = async(event, context) => {
+  const pubSubClient = new PubSub();
+
+  const gcsEvent = event;
+  const name = gcsEvent.name
+  const ext = gcsEvent.name.split(".")[1]
+   const topic = pubSubClient.topic(topicNameOrId);
+   const [topicMetadata] = await topic.getMetadata();
+  const topicSchemaMetadata = topicMetadata.schemaSettings;
+
+  if (!topicSchemaMetadata) {
+    console.log(`Topic ${topicNameOrId} doesn't seem to have a schema.`);
+    return;
+  }
+  const schemaEncoding = topicSchemaMetadata.encoding;
+
+  /**
+ * TODO(developer): Uncomment these variables before running the sample.
+ */
+  const projectId = 'xoogtrial';
+  const location = 'asia-south1';
+
+
+  const supportedExtensions = [".AVI", ".avi", ".GXF", ".gfx", ".MKV", ".mkv", ".MOV", ".mov", ".MPEG2-TS", ".ts", ".MP4", ".mp4", ".MXF", ".mxf", ".WebM", ".webm", ".WMV", ".wmv"]
+  if (supportedExtensions.includes(`.${ext}`)) {
+    const inputUri = `gs://ash_test5/${name}`;
+    const outputUri = `gs://ash_test6/transcoded/${name}/${ext}/`;
+    const templateId = "hd-h264-hls-dash";
+
+    // Instantiates a client
+    const transcoderServiceClient = new TranscoderServiceClient();
+
+      // Construct request
+      const request = {
+        parent: transcoderServiceClient.locationPath(projectId, location),
+        job: {
+          inputUri: inputUri,
+          outputUri: outputUri,
+          templateId: templateId,
+        },
+      };
+
+      // Run request
+      const [response] = await transcoderServiceClient.createJob(request);
+      console.log(`Job: ${response.name}`);
+      const data = await response
+      const type = "transcoding-start-status"
+
+      const province = {
+        'name': data.name,
+        'jobId': `${10 * (Math.random())}`,
+        'jobStartState': data.state
+      }
+      let dataBuffer;
+
+      try {
+       
+          dataBuffer = Buffer.from(type.toString(province));
+          console.log(dataBuffer,"dataBuffer")
+
+        const messageId = await topic.publish(dataBuffer);
+        console.log(`Avro record ${messageId} published.`);
+        console.log(dataBuffer,"rrrrrrrrrrrrrrrrr")
+
+      } catch {
+        console.log("error1234")
+      }
+    
+
+
+
+
+
+
+
+  } else {
+    console.log("extension not supported")
+  }
+
